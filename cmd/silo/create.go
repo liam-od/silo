@@ -84,8 +84,5 @@ func createInstance(
 		return err
 	}
 
-	agentCtx, cancelAgent := context.WithTimeout(ctx, 2*time.Minute)
-	err = waitForGuestAgent(agentCtx, client, name)
-	cancelAgent()
-	return err
+	return waitForInstanceReady(ctx, client, name)
 }

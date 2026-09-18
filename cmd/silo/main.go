@@ -51,10 +51,7 @@ func run(ctx context.Context, args []string) error {
 			return nil
 		}
 
-		agentCtx, cancelAgent := context.WithTimeout(ctx, 2*time.Minute)
-		err = waitForGuestAgent(agentCtx, client, name)
-		cancelAgent()
-		return err
+		return waitForInstanceReady(ctx, client, name)
 	}
 	return nil
 }
