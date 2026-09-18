@@ -68,7 +68,7 @@ func createInstance(
 
 	op, err := client.CreateInstance(request)
 	if err != nil {
-		return fmt.Errorf("initial create instance: %w", err)
+		return fmt.Errorf("start create instance: %w", err)
 	}
 	err = op.WaitContext(ctx)
 	if err != nil {
@@ -76,5 +76,5 @@ func createInstance(
 	}
 
 	fmt.Printf("Created %s (stopped).\n", name)
-	return nil
+	return updateInstance(ctx, client, name, "start")
 }

@@ -41,6 +41,42 @@ func TestParseArgs(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:  "start command with name",
+			input: []string{"start", "test-1"},
+			want: invocation{
+				command: "update",
+				args:    []string{"start", "test-1"},
+			},
+		},
+		{
+			name:    "start without name",
+			input:   []string{"start"},
+			wantErr: true,
+		},
+		{
+			name:    "start with extra argument",
+			input:   []string{"start", "test-1", "extra"},
+			wantErr: true,
+		},
+		{
+			name:  "stop command with name",
+			input: []string{"stop", "test-1"},
+			want: invocation{
+				command: "update",
+				args:    []string{"stop", "test-1"},
+			},
+		},
+		{
+			name:    "stop without name",
+			input:   []string{"stop"},
+			wantErr: true,
+		},
+		{
+			name:    "stop with extra argument",
+			input:   []string{"stop", "test-1", "extra"},
+			wantErr: true,
+		},
+		{
 			name:    "list with extra argument",
 			input:   []string{"list", "extra"},
 			wantErr: true,

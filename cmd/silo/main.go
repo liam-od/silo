@@ -37,6 +37,11 @@ func run(ctx context.Context, args []string) error {
 			inv.args[0],
 			defaultImageSource(),
 		)
+	case "update":
+		updateCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+		defer cancel()
+
+		return updateInstance(updateCtx, client, inv.args[1], inv.args[0])
 	}
 	return nil
 }

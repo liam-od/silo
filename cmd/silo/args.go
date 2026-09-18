@@ -25,6 +25,14 @@ func parseArgs(args []string) (invocation, error) {
 			return invocation{}, fmt.Errorf("too many arguments for 'create'")
 		}
 		return invocation{command: "create", args: args[1:]}, nil
+	case "start", "stop":
+		if len(args) == 1 {
+			return invocation{}, fmt.Errorf("missing name for `%s`", args[0])
+		}
+		if len(args) > 2 {
+			return invocation{}, fmt.Errorf("too many arguments for `%s`", args[0])
+		}
+		return invocation{command: "update", args: args}, nil
 	default:
 		return invocation{}, fmt.Errorf("unknown command %q", args[0])
 	}
