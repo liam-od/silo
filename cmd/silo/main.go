@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	incus "github.com/lxc/incus/v6/client"
 	"github.com/lxc/incus/v6/shared/api"
@@ -11,6 +12,19 @@ import (
 type invocation struct {
 	command string
 	args    []string
+}
+
+type imageSource struct {
+	reference string
+	alias     string
+	server    string
+	protocol  string
+}
+
+type createRequestParams struct {
+	name      string
+	createdAt time.Time
+	image     imageSource
 }
 
 func parseArgs(args []string) (invocation, error) {
@@ -65,6 +79,29 @@ func listInstances(client incus.InstanceServer) error {
 	}
 
 	return nil
+}
+
+func newCreateRequest(params createRequestParams) api.InstancesPost {
+	return api.InstancesPost{
+		InstancePut: api.InstancePut{
+			Config: map[string]string{
+				"user.silo.managed":    "true",
+				"user.silo.image":      params.image.reference,
+				"user.silo.created-at": params.createdAt.UTC().Format(time.RFC3339),
+			},
+			Profiles: []string{"default"},
+		},
+		Name: params.name,
+		Source: api.InstanceSource{
+			Type:     "image",
+			Mode:     "pull",
+			Server:   params.image.server,
+			Protocol: params.image.protocol,
+			Alias:    params.image.alias,
+		},
+		Type:  api.InstanceTypeVM,
+		Start: false,
+	}
 }
 
 func run(args []string) error {
