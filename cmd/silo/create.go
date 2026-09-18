@@ -68,7 +68,7 @@ func createInstance(
 
 	op, err := client.CreateInstance(request)
 	if err != nil {
-		return fmt.Errorf("start create instance: %w", err)
+		return fmt.Errorf("submit create instance: %w", err)
 	}
 	err = op.WaitContext(ctx)
 	if err != nil {
@@ -76,5 +76,16 @@ func createInstance(
 	}
 
 	fmt.Printf("Created %s (stopped).\n", name)
-	return updateInstance(ctx, client, name, "start")
+
+	startCtx, cancelStart := context.WithTimeout(ctx, 2*time.Minute)
+	err = updateInstance(startCtx, client, name, "start")
+	cancelStart()
+	if err != nil {
+		return err
+	}
+
+	agentCtx, cancelAgent := context.WithTimeout(ctx, 2*time.Minute)
+	err = waitForGuestAgent(agentCtx, client, name)
+	cancelAgent()
+	return err
 }

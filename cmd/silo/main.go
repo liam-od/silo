@@ -38,10 +38,23 @@ func run(ctx context.Context, args []string) error {
 			defaultImageSource(),
 		)
 	case "update":
-		updateCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-		defer cancel()
+		action := inv.args[0]
+		name := inv.args[1]
 
-		return updateInstance(updateCtx, client, inv.args[1], inv.args[0])
+		updateCtx, cancelUpdate := context.WithTimeout(ctx, 2*time.Minute)
+		err := updateInstance(updateCtx, client, name, action)
+		cancelUpdate()
+		if err != nil {
+			return err
+		}
+		if action != "start" {
+			return nil
+		}
+
+		agentCtx, cancelAgent := context.WithTimeout(ctx, 2*time.Minute)
+		err = waitForGuestAgent(agentCtx, client, name)
+		cancelAgent()
+		return err
 	}
 	return nil
 }
