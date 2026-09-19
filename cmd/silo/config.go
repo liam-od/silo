@@ -34,7 +34,25 @@ func getConfig() (siloConfig, error) {
 		return defaultConfig(), fmt.Errorf("get user config directory: %w", err)
 	}
 
-	return loadConfig(filepath.Join(configDir, "silo", "config.toml"))
+	configPath := filepath.Join(configDir, "silo", "config.toml")
+	config, err := loadConfig(configPath)
+	if err != nil {
+		return defaultConfig(), err
+	}
+	if config.Instance.SSHPublicKey == "" {
+		return defaultConfig(), fmt.Errorf(
+			"instance.ssh_public_key is not configured in %q",
+			configPath,
+		)
+	}
+
+	keyPath := config.Instance.SSHPublicKey
+	config.Instance.SSHPublicKey, err = readSSHPublicKey(keyPath)
+	if err != nil {
+		return defaultConfig(), fmt.Errorf("read SSH public key %q: %w", keyPath, err)
+	}
+
+	return config, nil
 }
 
 func loadConfig(configPath string) (siloConfig, error) {
@@ -66,4 +84,18 @@ func expandHome(path string) (string, error) {
 	}
 
 	return filepath.Join(home, path[2:]), nil
+}
+
+func readSSHPublicKey(path string) (string, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("read ssh public key file: %w", err)
+	}
+
+	key := strings.TrimSpace(string(content))
+	if key == "" {
+		return "", fmt.Errorf("empty ssh public key")
+	}
+
+	return key, nil
 }
