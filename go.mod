@@ -2,7 +2,10 @@ module github.com/liam-od/silo
 
 go 1.27.1
 
-require github.com/lxc/incus/v6 v6.0.5
+require (
+	github.com/BurntSushi/toml v1.6.0
+	github.com/lxc/incus/v6 v6.0.5
+)
 
 require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20240806141605-e8a1dd7889d6 // indirect

@@ -32,6 +32,7 @@ func waitForInstanceReady(
 	guestAddressCtx, cancelGuestAddress := context.WithTimeout(ctx, 2*time.Minute)
 	_, err = waitForGuestAddress(guestAddressCtx, client, name)
 	cancelGuestAddress()
+
 	return err
 }
 

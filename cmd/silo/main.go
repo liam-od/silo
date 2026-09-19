@@ -28,11 +28,17 @@ func run(ctx context.Context, args []string) error {
 	case "list":
 		return listInstances(client)
 	case "create":
+		config, err := getConfig()
+		if err != nil {
+			return err
+		}
+
 		createCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 		defer cancel()
 
 		return createInstance(
 			createCtx,
+			config,
 			client,
 			inv.args[0],
 			defaultImageSource(),

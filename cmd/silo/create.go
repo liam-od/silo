@@ -54,6 +54,7 @@ func newCreateRequest(params createInstanceRequestParams) api.InstancesPost {
 
 func createInstance(
 	ctx context.Context,
+	config siloConfig,
 	client incus.InstanceServer,
 	name string,
 	image imageSource,
@@ -84,5 +85,11 @@ func createInstance(
 		return err
 	}
 
-	return waitForInstanceReady(ctx, client, name)
+	err = waitForInstanceReady(ctx, client, name)
+	if err != nil {
+		return err
+	}
+
+	// Do Cloud-init stuff i.e Read public key...
+	return nil
 }
