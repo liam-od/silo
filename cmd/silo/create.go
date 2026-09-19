@@ -10,11 +10,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const defaultInstanceUser = "agent"
+
 type imageSource struct {
 	reference string
 	alias     string
-	server    string
-	protocol  string
 }
 
 type createInstanceRequestParams struct {
@@ -33,19 +33,13 @@ type cloudInitConfig struct {
 
 type cloudInitUser struct {
 	Name              string   `yaml:"name"`
-	Shell             string   `yaml:"shell"`
-	Groups            []string `yaml:"groups"`
-	Sudo              []string `yaml:"sudo"`
-	LockPasswd        bool     `yaml:"lock_passwd"`
 	SSHAuthorizedKeys []string `yaml:"ssh_authorized_keys"`
 }
 
 func defaultImageSource() imageSource {
 	return imageSource{
-		reference: "images:ubuntu/24.04/cloud",
-		alias:     "ubuntu/24.04/cloud",
-		server:    "https://images.linuxcontainers.org",
-		protocol:  "simplestreams",
+		reference: "silo-dev-v1",
+		alias:     "silo-dev-v1",
 	}
 }
 
@@ -60,23 +54,17 @@ func newCreateRequest(params createInstanceRequestParams) api.InstancesPost {
 		Profiles: []string{"default"},
 		Name:     params.name,
 		Source: api.InstanceSource{
-			Type:     "image",
-			Mode:     "pull",
-			Server:   params.image.server,
-			Protocol: params.image.protocol,
-			Alias:    params.image.alias,
+			Type:  "image",
+			Alias: params.image.alias,
 		},
 		Type:  api.InstanceTypeVM,
 		Start: false,
 	}
 }
 
-func newCloudInitUserData(instanceName, user, publicKey string) (string, error) {
+func newCloudInitUserData(instanceName, publicKey string) (string, error) {
 	if instanceName == "" {
 		return "", fmt.Errorf("cloud-init hostname is empty")
-	}
-	if user == "" {
-		return "", fmt.Errorf("cloud-init user is empty")
 	}
 	if publicKey == "" {
 		return "", fmt.Errorf("cloud-init SSH public key is empty")
@@ -88,11 +76,7 @@ func newCloudInitUserData(instanceName, user, publicKey string) (string, error) 
 		SSHPwauth:      false,
 		Users: []cloudInitUser{
 			{
-				Name:              user,
-				Shell:             "/bin/bash",
-				Groups:            []string{"sudo"},
-				Sudo:              []string{"ALL=(ALL) NOPASSWD:ALL"},
-				LockPasswd:        true,
+				Name:              defaultInstanceUser,
 				SSHAuthorizedKeys: []string{publicKey},
 			},
 		},
@@ -113,7 +97,7 @@ func createInstance(
 	name string,
 	image imageSource,
 ) error {
-	userData, err := newCloudInitUserData(name, config.Instance.SSHUser, config.Instance.SSHPublicKey)
+	userData, err := newCloudInitUserData(name, config.Instance.SSHPublicKey)
 	if err != nil {
 		return err
 	}

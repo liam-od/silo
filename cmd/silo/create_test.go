@@ -10,6 +10,16 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func TestDefaultImageSource(t *testing.T) {
+	got := defaultImageSource()
+	if got.reference != "silo-dev-v1" {
+		t.Errorf("reference = %q, want %q", got.reference, "silo-dev-v1")
+	}
+	if got.alias != "silo-dev-v1" {
+		t.Errorf("alias = %q, want %q", got.alias, "silo-dev-v1")
+	}
+}
+
 func TestNewCreateRequest(t *testing.T) {
 	createdAt := time.Date(
 		2026, time.September, 17,
@@ -17,10 +27,8 @@ func TestNewCreateRequest(t *testing.T) {
 		time.FixedZone("UTC+2", 2*60*60),
 	)
 	image := imageSource{
-		reference: "test:silo-dev-v1",
+		reference: "silo-dev-v1",
 		alias:     "silo-dev-v1",
-		server:    "https://example.invalid",
-		protocol:  "simplestreams",
 	}
 
 	const userData = "#cloud-config\nhostname: test-1\n"
@@ -47,14 +55,14 @@ func TestNewCreateRequest(t *testing.T) {
 	if got.Source.Type != "image" {
 		t.Errorf("source type = %q, want %q", got.Source.Type, "image")
 	}
-	if got.Source.Mode != "pull" {
-		t.Errorf("source mode = %q, want %q", got.Source.Mode, "pull")
+	if got.Source.Mode != "" {
+		t.Errorf("source mode = %q, want empty for local image", got.Source.Mode)
 	}
-	if got.Source.Server != image.server {
-		t.Errorf("source server = %q, want %q", got.Source.Server, image.server)
+	if got.Source.Server != "" {
+		t.Errorf("source server = %q, want empty for local image", got.Source.Server)
 	}
-	if got.Source.Protocol != image.protocol {
-		t.Errorf("source protocol = %q, want %q", got.Source.Protocol, image.protocol)
+	if got.Source.Protocol != "" {
+		t.Errorf("source protocol = %q, want empty for local image", got.Source.Protocol)
 	}
 	if got.Source.Alias != image.alias {
 		t.Errorf("source alias = %q, want %q", got.Source.Alias, image.alias)
@@ -82,7 +90,7 @@ func TestNewCreateRequest(t *testing.T) {
 
 func TestNewCloudInitUserData(t *testing.T) {
 	const publicKey = "ssh-ed25519 key-material developer: laptop #1"
-	got, err := newCloudInitUserData("test-1", "agent", publicKey)
+	got, err := newCloudInitUserData("test-1", publicKey)
 	if err != nil {
 		t.Fatalf("newCloudInitUserData() error = %v", err)
 	}
@@ -114,28 +122,24 @@ func TestNewCloudInitUserData(t *testing.T) {
 	if user.Name != "agent" {
 		t.Errorf("user name = %q, want %q", user.Name, "agent")
 	}
-	if user.Shell != "/bin/bash" {
-		t.Errorf("shell = %q, want %q", user.Shell, "/bin/bash")
-	}
-	if !slices.Equal(user.Groups, []string{"sudo"}) {
-		t.Errorf("groups = %v, want [sudo]", user.Groups)
-	}
-	if !slices.Equal(user.Sudo, []string{"ALL=(ALL) NOPASSWD:ALL"}) {
-		t.Errorf("sudo = %v, want [ALL=(ALL) NOPASSWD:ALL]", user.Sudo)
-	}
-	if !user.LockPasswd {
-		t.Error("lock_passwd = false, want true")
-	}
 	if !slices.Equal(user.SSHAuthorizedKeys, []string{publicKey}) {
 		t.Errorf("SSH authorized keys = %v, want [%q]", user.SSHAuthorizedKeys, publicKey)
 	}
 
-	var raw map[string]any
+	var raw struct {
+		SSHPwauth any              `yaml:"ssh_pwauth"`
+		Users     []map[string]any `yaml:"users"`
+	}
 	if err := yaml.Unmarshal([]byte(strings.TrimPrefix(got, header)), &raw); err != nil {
 		t.Fatalf("decode generated cloud-init data as map: %v", err)
 	}
-	if value, ok := raw["ssh_pwauth"]; !ok || value != false {
-		t.Errorf("ssh_pwauth field = %v, present = %v; want false and present", value, ok)
+	if raw.SSHPwauth != false {
+		t.Errorf("ssh_pwauth field = %v, want false", raw.SSHPwauth)
+	}
+	for _, field := range []string{"shell", "groups", "sudo", "lock_passwd"} {
+		if _, ok := raw.Users[0][field]; ok {
+			t.Errorf("cloud-init user unexpectedly contains image-owned field %q", field)
+		}
 	}
 }
 
@@ -143,17 +147,15 @@ func TestNewCloudInitUserDataRejectsEmptyRequiredValues(t *testing.T) {
 	tests := []struct {
 		name      string
 		instance  string
-		user      string
 		publicKey string
 	}{
-		{name: "empty hostname", user: "agent", publicKey: "ssh-ed25519 key-material"},
-		{name: "empty user", instance: "test-1", publicKey: "ssh-ed25519 key-material"},
-		{name: "empty public key", instance: "test-1", user: "agent"},
+		{name: "empty hostname", publicKey: "ssh-ed25519 key-material"},
+		{name: "empty public key", instance: "test-1"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := newCloudInitUserData(tt.instance, tt.user, tt.publicKey); err == nil {
+			if _, err := newCloudInitUserData(tt.instance, tt.publicKey); err == nil {
 				t.Fatal("newCloudInitUserData() error = nil, want an error")
 			}
 		})

@@ -15,14 +15,12 @@ type siloConfig struct {
 }
 
 type instanceConfig struct {
-	SSHUser      string `toml:"ssh_user"`
 	SSHPublicKey string `toml:"ssh_public_key"`
 }
 
 func defaultConfig() siloConfig {
 	return siloConfig{
 		Instance: instanceConfig{
-			SSHUser:      "agent",
 			SSHPublicKey: "",
 		},
 	}

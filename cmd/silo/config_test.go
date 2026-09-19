@@ -21,7 +21,7 @@ func TestGetConfig(t *testing.T) {
 		if err := os.MkdirAll(siloDir, 0o700); err != nil {
 			t.Fatalf("create config directory: %v", err)
 		}
-		contents := "[instance]\nssh_user = \"developer\"\nssh_public_key = \"" + keyPath + "\"\n"
+		contents := "[instance]\nssh_public_key = \"" + keyPath + "\"\n"
 		if err := os.WriteFile(filepath.Join(siloDir, "config.toml"), []byte(contents), 0o600); err != nil {
 			t.Fatalf("write config: %v", err)
 		}
@@ -29,9 +29,6 @@ func TestGetConfig(t *testing.T) {
 		got, err := getConfig()
 		if err != nil {
 			t.Fatalf("getConfig() error = %v", err)
-		}
-		if got.Instance.SSHUser != "developer" {
-			t.Errorf("SSH user = %q, want %q", got.Instance.SSHUser, "developer")
 		}
 		const wantKey = "ssh-ed25519 key-material test@example"
 		if got.Instance.SSHPublicKey != wantKey {
@@ -58,7 +55,7 @@ func TestLoadConfig(t *testing.T) {
 		}
 	})
 
-	t.Run("partial file retains defaults", func(t *testing.T) {
+	t.Run("absolute key path is loaded", func(t *testing.T) {
 		path := writeTestConfig(t, `[instance]
 ssh_public_key = "/tmp/silo.pub"
 `)
@@ -67,28 +64,21 @@ ssh_public_key = "/tmp/silo.pub"
 		if err != nil {
 			t.Fatalf("loadConfig() error = %v", err)
 		}
-		if got.Instance.SSHUser != defaultConfig().Instance.SSHUser {
-			t.Errorf("SSH user = %q, want default %q", got.Instance.SSHUser, defaultConfig().Instance.SSHUser)
-		}
 		if got.Instance.SSHPublicKey != "/tmp/silo.pub" {
 			t.Errorf("SSH public key = %q, want %q", got.Instance.SSHPublicKey, "/tmp/silo.pub")
 		}
 	})
 
-	t.Run("complete file overrides defaults", func(t *testing.T) {
+	t.Run("home-relative key path is expanded", func(t *testing.T) {
 		home := t.TempDir()
 		t.Setenv("HOME", home)
 		path := writeTestConfig(t, `[instance]
-ssh_user = "developer"
 ssh_public_key = "~/.ssh/developer.pub"
 `)
 
 		got, err := loadConfig(path)
 		if err != nil {
 			t.Fatalf("loadConfig() error = %v", err)
-		}
-		if got.Instance.SSHUser != "developer" {
-			t.Errorf("SSH user = %q, want %q", got.Instance.SSHUser, "developer")
 		}
 		wantKey := filepath.Join(home, ".ssh", "developer.pub")
 		if got.Instance.SSHPublicKey != wantKey {
