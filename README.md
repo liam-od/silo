@@ -1,16 +1,23 @@
-# Silo
+# Silo - WIP
+
+CLI wrapping incus go package to easily work with containers / VMs for agent sandoxes.
+
+## Documentaiton
+
+- https://linuxcontainers.org/incus/docs/main/
+- https://pkg.go.dev/github.com/lxc/incus
 
 ## Dependencies
 
 Install `golang` with `mise use --global go`, which tracks `@latest` by default, and
 `sudo apt install incus zfsutils-linux`.
 
-
 ## Setup
 
 Need incus-admin, `sudo adduser "$USER" incus-admin`, then log out and back in.
 Run `incus admin init` and follow these options:
 
+```text
 Would you like to use clustering? (yes/no) [default=no]: no
 Do you want to configure a new storage pool? (yes/no) [default=yes]: yes
 Name of the new storage pool [default=default]:
@@ -25,6 +32,7 @@ What IPv6 address should be used? (CIDR subnet notation, “auto” or “none�
 Would you like the server to be available over the network? (yes/no) [default=no]:
 Would you like stale cached images to be updated automatically? (yes/no) [default=yes]:
 Would you like a YAML "init" preseed to be printed? (yes/no) [default=no]: yes
+```
 
 ```yaml
 config: {}
