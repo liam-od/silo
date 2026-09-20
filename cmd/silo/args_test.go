@@ -41,6 +41,24 @@ func TestParseArgs(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:  "ssh command with name",
+			input: []string{"ssh", "test-1"},
+			want: invocation{
+				command: "ssh",
+				args:    []string{"test-1"},
+			},
+		},
+		{
+			name:    "ssh without name",
+			input:   []string{"ssh"},
+			wantErr: true,
+		},
+		{
+			name:    "ssh with extra argument",
+			input:   []string{"ssh", "test-1", "extra"},
+			wantErr: true,
+		},
+		{
 			name:  "start command with name",
 			input: []string{"start", "test-1"},
 			want: invocation{
