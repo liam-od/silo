@@ -71,6 +71,17 @@ func run(ctx context.Context, args []string) error {
 		}
 
 		return waitForInstanceReady(ctx, client, name)
+	case "ssh":
+		config, err := getConfig()
+		if err != nil {
+			return err
+		}
+
+		if config.Instance.SSHIdentityFile == "" {
+			return fmt.Errorf("instance.ssh_identity_file is not configured")
+		}
+
+		return execSSH(client, inv.args[0], config.Instance.SSHIdentityFile)
 	}
 	return nil
 }
