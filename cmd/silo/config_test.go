@@ -8,20 +8,19 @@ import (
 )
 
 func TestGetConfig(t *testing.T) {
-	t.Run("configured key is read", func(t *testing.T) {
+	t.Run("configured paths are loaded without reading files", func(t *testing.T) {
 		configDir := t.TempDir()
 		t.Setenv("XDG_CONFIG_HOME", configDir)
-
-		keyPath := filepath.Join(t.TempDir(), "silo.pub")
-		if err := os.WriteFile(keyPath, []byte("ssh-ed25519 key-material test@example\n"), 0o600); err != nil {
-			t.Fatalf("write key: %v", err)
-		}
 
 		siloDir := filepath.Join(configDir, "silo")
 		if err := os.MkdirAll(siloDir, 0o700); err != nil {
 			t.Fatalf("create config directory: %v", err)
 		}
-		contents := "[instance]\nssh_public_key = \"" + keyPath + "\"\n"
+
+		contents := `[instance]
+ssh_public_key = "/missing/silo.pub"
+ssh_identity_file = "/missing/silo"
+`
 		if err := os.WriteFile(filepath.Join(siloDir, "config.toml"), []byte(contents), 0o600); err != nil {
 			t.Fatalf("write config: %v", err)
 		}
@@ -30,16 +29,23 @@ func TestGetConfig(t *testing.T) {
 		if err != nil {
 			t.Fatalf("getConfig() error = %v", err)
 		}
-		const wantKey = "ssh-ed25519 key-material test@example"
-		if got.Instance.SSHPublicKey != wantKey {
-			t.Errorf("SSH public key = %q, want %q", got.Instance.SSHPublicKey, wantKey)
+		if got.Instance.SSHPublicKeyPath != "/missing/silo.pub" {
+			t.Errorf("SSH public key path = %q, want %q", got.Instance.SSHPublicKeyPath, "/missing/silo.pub")
+		}
+		if got.Instance.SSHIdentityFile != "/missing/silo" {
+			t.Errorf("SSH identity file = %q, want %q", got.Instance.SSHIdentityFile, "/missing/silo")
 		}
 	})
 
-	t.Run("missing key configuration returns error", func(t *testing.T) {
+	t.Run("missing file returns defaults", func(t *testing.T) {
 		t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-		if _, err := getConfig(); err == nil {
-			t.Fatal("getConfig() error = nil, want an error")
+
+		got, err := getConfig()
+		if err != nil {
+			t.Fatalf("getConfig() error = %v", err)
+		}
+		if got != defaultConfig() {
+			t.Errorf("config = %#v, want %#v", got, defaultConfig())
 		}
 	})
 }
@@ -55,34 +61,43 @@ func TestLoadConfig(t *testing.T) {
 		}
 	})
 
-	t.Run("absolute key path is loaded", func(t *testing.T) {
+	t.Run("absolute SSH paths are loaded", func(t *testing.T) {
 		path := writeTestConfig(t, `[instance]
 ssh_public_key = "/tmp/silo.pub"
+ssh_identity_file = "/tmp/silo"
 `)
 
 		got, err := loadConfig(path)
 		if err != nil {
 			t.Fatalf("loadConfig() error = %v", err)
 		}
-		if got.Instance.SSHPublicKey != "/tmp/silo.pub" {
-			t.Errorf("SSH public key = %q, want %q", got.Instance.SSHPublicKey, "/tmp/silo.pub")
+		if got.Instance.SSHPublicKeyPath != "/tmp/silo.pub" {
+			t.Errorf("SSH public key path = %q, want %q", got.Instance.SSHPublicKeyPath, "/tmp/silo.pub")
+		}
+		if got.Instance.SSHIdentityFile != "/tmp/silo" {
+			t.Errorf("SSH identity file = %q, want %q", got.Instance.SSHIdentityFile, "/tmp/silo")
 		}
 	})
 
-	t.Run("home-relative key path is expanded", func(t *testing.T) {
+	t.Run("home-relative SSH paths are expanded", func(t *testing.T) {
 		home := t.TempDir()
 		t.Setenv("HOME", home)
 		path := writeTestConfig(t, `[instance]
 ssh_public_key = "~/.ssh/developer.pub"
+ssh_identity_file = "~/.ssh/developer"
 `)
 
 		got, err := loadConfig(path)
 		if err != nil {
 			t.Fatalf("loadConfig() error = %v", err)
 		}
-		wantKey := filepath.Join(home, ".ssh", "developer.pub")
-		if got.Instance.SSHPublicKey != wantKey {
-			t.Errorf("SSH public key = %q, want %q", got.Instance.SSHPublicKey, wantKey)
+		wantPublicKey := filepath.Join(home, ".ssh", "developer.pub")
+		if got.Instance.SSHPublicKeyPath != wantPublicKey {
+			t.Errorf("SSH public key path = %q, want %q", got.Instance.SSHPublicKeyPath, wantPublicKey)
+		}
+		wantIdentity := filepath.Join(home, ".ssh", "developer")
+		if got.Instance.SSHIdentityFile != wantIdentity {
+			t.Errorf("SSH identity file = %q, want %q", got.Instance.SSHIdentityFile, wantIdentity)
 		}
 	})
 

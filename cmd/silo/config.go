@@ -15,13 +15,15 @@ type siloConfig struct {
 }
 
 type instanceConfig struct {
-	SSHPublicKey string `toml:"ssh_public_key"`
+	SSHPublicKeyPath string `toml:"ssh_public_key"`
+	SSHIdentityFile  string `toml:"ssh_identity_file"`
 }
 
 func defaultConfig() siloConfig {
 	return siloConfig{
 		Instance: instanceConfig{
-			SSHPublicKey: "",
+			SSHPublicKeyPath: "",
+			SSHIdentityFile:  "",
 		},
 	}
 }
@@ -37,19 +39,6 @@ func getConfig() (siloConfig, error) {
 	if err != nil {
 		return defaultConfig(), err
 	}
-	if config.Instance.SSHPublicKey == "" {
-		return defaultConfig(), fmt.Errorf(
-			"instance.ssh_public_key is not configured in %q",
-			configPath,
-		)
-	}
-
-	keyPath := config.Instance.SSHPublicKey
-	config.Instance.SSHPublicKey, err = readSSHPublicKey(keyPath)
-	if err != nil {
-		return defaultConfig(), fmt.Errorf("read SSH public key %q: %w", keyPath, err)
-	}
-
 	return config, nil
 }
 
@@ -60,9 +49,14 @@ func loadConfig(configPath string) (siloConfig, error) {
 		return defaultConfig(), fmt.Errorf("decode config file %q: %w", configPath, err)
 	}
 
-	config.Instance.SSHPublicKey, err = expandHome(config.Instance.SSHPublicKey)
+	config.Instance.SSHPublicKeyPath, err = expandHome(config.Instance.SSHPublicKeyPath)
 	if err != nil {
 		return defaultConfig(), fmt.Errorf("expand SSH public key path: %w", err)
+	}
+
+	config.Instance.SSHIdentityFile, err = expandHome(config.Instance.SSHIdentityFile)
+	if err != nil {
+		return defaultConfig(), fmt.Errorf("expand SSH identity file path: %w", err)
 	}
 
 	return config, nil

@@ -33,12 +33,25 @@ func run(ctx context.Context, args []string) error {
 			return err
 		}
 
+		if config.Instance.SSHPublicKeyPath == "" {
+			return fmt.Errorf("instance.ssh_public_key is not configured")
+		}
+
+		publicKey, err := readSSHPublicKey(config.Instance.SSHPublicKeyPath)
+		if err != nil {
+			return fmt.Errorf(
+				"read SSH public key %q: %w",
+				config.Instance.SSHPublicKeyPath,
+				err,
+			)
+		}
+
 		createCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 		defer cancel()
 
 		return createInstance(
 			createCtx,
-			config,
+			publicKey,
 			client,
 			inv.args[0],
 			defaultImageSource(),

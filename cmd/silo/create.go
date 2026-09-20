@@ -92,12 +92,12 @@ func newCloudInitUserData(instanceName, publicKey string) (string, error) {
 
 func createInstance(
 	ctx context.Context,
-	config siloConfig,
+	publicKey string,
 	client incus.InstanceServer,
 	name string,
 	image imageSource,
 ) error {
-	userData, err := newCloudInitUserData(name, config.Instance.SSHPublicKey)
+	userData, err := newCloudInitUserData(name, publicKey)
 	if err != nil {
 		return err
 	}
