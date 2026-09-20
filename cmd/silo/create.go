@@ -129,8 +129,7 @@ func createInstance(
 		return err
 	}
 
-	err = waitForInstanceReady(ctx, client, name)
-	if err != nil {
+	if err := waitForInstanceReady(ctx, client, name); err != nil {
 		return err
 	}
 

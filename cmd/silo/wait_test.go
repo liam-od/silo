@@ -1,10 +1,49 @@
 package main
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"net"
 	"testing"
+	"time"
 
 	"github.com/lxc/incus/v6/shared/api"
 )
+
+func TestWaitForPort(t *testing.T) {
+	t.Run("listening port is ready", func(t *testing.T) {
+		listener, err := net.Listen("tcp4", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("listen: %v", err)
+		}
+		defer listener.Close()
+
+		port := listener.Addr().(*net.TCPAddr).Port
+		if err := waitForPort(t.Context(), "127.0.0.1", fmt.Sprint(port)); err != nil {
+			t.Fatalf("waitForPort() error = %v", err)
+		}
+	})
+
+	t.Run("context deadline is returned", func(t *testing.T) {
+		listener, err := net.Listen("tcp4", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("listen: %v", err)
+		}
+		port := listener.Addr().(*net.TCPAddr).Port
+		if err := listener.Close(); err != nil {
+			t.Fatalf("close listener: %v", err)
+		}
+
+		ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+		defer cancel()
+
+		err = waitForPort(ctx, "127.0.0.1", fmt.Sprint(port))
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("waitForPort() error = %v, want context deadline exceeded", err)
+		}
+	})
+}
 
 func TestFindGuestIPv4(t *testing.T) {
 	tests := []struct {

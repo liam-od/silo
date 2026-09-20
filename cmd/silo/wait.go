@@ -30,10 +30,52 @@ func waitForInstanceReady(
 	}
 
 	guestAddressCtx, cancelGuestAddress := context.WithTimeout(ctx, 2*time.Minute)
-	_, err = waitForGuestAddress(guestAddressCtx, client, name)
+	address, err := waitForGuestAddress(guestAddressCtx, client, name)
 	cancelGuestAddress()
+	if err != nil {
+		return err
+	}
+
+	sshCtx, cancelSSH := context.WithTimeout(ctx, 2*time.Minute)
+	err = waitForSSHPort(sshCtx, address)
+	cancelSSH()
 
 	return err
+}
+
+func waitForSSHPort(ctx context.Context, address string) error {
+	fmt.Printf("Waiting for SSH on %s...\n", address)
+
+	if err := waitForPort(ctx, address, "22"); err != nil {
+		return fmt.Errorf("wait for SSH on %q: %w", address, err)
+	}
+
+	fmt.Printf("SSH ready on %s.\n", address)
+	return nil
+}
+
+func waitForPort(ctx context.Context, address, port string) error {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	target := net.JoinHostPort(address, port)
+	dialer := net.Dialer{
+		Timeout: time.Second,
+	}
+
+	for {
+		conn, err := dialer.DialContext(ctx, "tcp", target)
+		if err == nil {
+			_ = conn.Close()
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+		}
+	}
 }
 
 func waitForGuestAgent(
@@ -98,14 +140,9 @@ func waitForGuestAddress(ctx context.Context, client incus.InstanceServer, name 
 	defer ticker.Stop()
 
 	for {
-		state, _, err := client.GetInstanceState(name)
+		address, found, err := getGuestAddress(client, name)
 		if err != nil {
-			return "", fmt.Errorf("get instance state for %q: %w", name, err)
-		}
-
-		address, found, err := findGuestIPv4(state.Network)
-		if err != nil {
-			return "", fmt.Errorf("select guest address for %q: %w", name, err)
+			return "", fmt.Errorf("get guest address: %w", err)
 		}
 		if found {
 			fmt.Printf("Address ready on %s: %s\n", name, address)
@@ -117,6 +154,20 @@ func waitForGuestAddress(ctx context.Context, client incus.InstanceServer, name 
 		case <-ticker.C:
 		}
 	}
+}
+
+func getGuestAddress(client incus.InstanceServer, name string) (string, bool, error) {
+	state, _, err := client.GetInstanceState(name)
+	if err != nil {
+		return "", false, fmt.Errorf("get instance state for %q: %w", name, err)
+	}
+
+	address, found, err := findGuestIPv4(state.Network)
+	if err != nil {
+		return "", false, fmt.Errorf("select guest address for %q: %w", name, err)
+	}
+
+	return address, found, nil
 }
 
 func findGuestIPv4(networks map[string]api.InstanceStateNetwork) (string, bool, error) {
