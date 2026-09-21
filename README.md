@@ -69,3 +69,14 @@ projects: []
 certificates: []
 cluster: null
 ```
+
+## SSH Usage
+
+SSH client options can be passed after `--`:
+
+```sh
+silo ssh <instance> -- -A -L 3000:localhost:3000
+```
+
+These values are inserted before the generated SSH destination, so remote command
+arguments are not supported.

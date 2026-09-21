@@ -54,8 +54,29 @@ func TestParseArgs(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "ssh with extra argument",
-			input:   []string{"ssh", "test-1", "extra"},
+			name:    "ssh with separator instead of name",
+			input:   []string{"ssh", "--", "-A"},
+			wantErr: true,
+		},
+		{
+			name:  "ssh with forwarded options",
+			input: []string{"ssh", "test-1", "--", "-A", "-L", "3000:localhost:3000"},
+			want: invocation{
+				command: "ssh",
+				args:    []string{"test-1", "-A", "-L", "3000:localhost:3000"},
+			},
+		},
+		{
+			name:  "ssh with empty forwarding separator",
+			input: []string{"ssh", "test-1", "--"},
+			want: invocation{
+				command: "ssh",
+				args:    []string{"test-1"},
+			},
+		},
+		{
+			name:    "ssh with unseparated option",
+			input:   []string{"ssh", "test-1", "-A"},
 			wantErr: true,
 		},
 		{
