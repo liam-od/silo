@@ -81,7 +81,7 @@ func run(ctx context.Context, args []string) error {
 			return fmt.Errorf("instance.ssh_identity_file is not configured")
 		}
 
-		return execSSH(client, inv.args[0], config.Instance.SSHIdentityFile)
+		return execSSH(client, inv.args[0], config.Instance.SSHIdentityFile, inv.args[1:])
 	}
 	return nil
 }
