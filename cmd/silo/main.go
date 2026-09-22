@@ -9,6 +9,7 @@ import (
 	"time"
 
 	incus "github.com/lxc/incus/v6/client"
+	"golang.org/x/term"
 )
 
 func run(ctx context.Context, args []string) error {
@@ -56,12 +57,19 @@ func run(ctx context.Context, args []string) error {
 			inv.args[0],
 			defaultImageSource(),
 		)
+	case "delete":
+		confirm := interactiveDeletionConfirmer(
+			os.Stdin,
+			os.Stdout,
+			term.IsTerminal(int(os.Stdin.Fd())),
+		)
+		return deleteInstance(ctx, client, inv.args[0], confirm, os.Stdout, removeKnownHost)
 	case "update":
 		action := inv.args[0]
 		name := inv.args[1]
 
 		updateCtx, cancelUpdate := context.WithTimeout(ctx, 2*time.Minute)
-		err := updateInstance(updateCtx, client, name, action)
+		err := updateInstance(updateCtx, client, os.Stdout, name, action, -1)
 		cancelUpdate()
 		if err != nil {
 			return err

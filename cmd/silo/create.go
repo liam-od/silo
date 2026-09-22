@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	incus "github.com/lxc/incus/v6/client"
@@ -123,7 +124,7 @@ func createInstance(
 	fmt.Printf("Created %s (stopped).\n", name)
 
 	startCtx, cancelStart := context.WithTimeout(ctx, 2*time.Minute)
-	err = updateInstance(startCtx, client, name, "start")
+	err = updateInstance(startCtx, client, os.Stdout, name, "start", -1)
 	cancelStart()
 	if err != nil {
 		return err
