@@ -20,7 +20,7 @@ func parseArgs(args []string) (invocation, error) {
 			return invocation{}, fmt.Errorf("too many arguments for 'list'")
 		}
 		return invocation{command: "list"}, nil
-	case "create":
+	case "create", "delete":
 		if len(args) == 1 {
 			return invocation{}, fmt.Errorf("missing name for %q", command)
 		}

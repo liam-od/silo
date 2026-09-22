@@ -41,6 +41,24 @@ func TestParseArgs(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:  "delete command with name",
+			input: []string{"delete", "test-1"},
+			want: invocation{
+				command: "delete",
+				args:    []string{"test-1"},
+			},
+		},
+		{
+			name:    "delete without name",
+			input:   []string{"delete"},
+			wantErr: true,
+		},
+		{
+			name:    "delete with extra argument",
+			input:   []string{"delete", "test-1", "extra"},
+			wantErr: true,
+		},
+		{
 			name:  "ssh command with name",
 			input: []string{"ssh", "test-1"},
 			want: invocation{
